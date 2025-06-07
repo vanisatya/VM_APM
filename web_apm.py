@@ -5,7 +5,7 @@ import requests
 import socket
 from datetime import datetime
 
-API_ENDPOINT = os.getenv("API_ENDPOINT", "http://127.0.0.1:8000/metrics/upload")
+API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
 HOSTNAME = socket.gethostname()
 PARENT_DIR = os.getenv("APPS_BASE_DIR", "/")
 

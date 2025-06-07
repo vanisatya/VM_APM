@@ -5,7 +5,7 @@ import socket
 import os
 from datetime import datetime
 
-API_ENDPOINT = os.getenv("API_ENDPOINT", "http://127.0.0.1:8000/metrics/upload")
+API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
 HOSTNAME = socket.gethostname()
 
 def get_server_apm(pid):
