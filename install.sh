@@ -1,25 +1,23 @@
 #!/bin/bash
 
-echo "📦 Installing APM Agent..."
+echo "📦 Installing VM APM components..."
 
-# Create working directory
-mkdir -p ~/apm_agent/static
-cd ~/apm_agent || exit 1
+# Download the latest versions
+echo "📥 Downloading APM files..."
+curl -s -O https://raw.githubusercontent.com/vanisatya/VM_APM/master/server_apm.py
+curl -s -O https://raw.githubusercontent.com/vanisatya/VM_APM/master/web_apm.py
+curl -s -O https://raw.githubusercontent.com/vanisatya/VM_APM/master/requirements.txt
 
-# Download Python files from GitHub
-echo "📥 Downloading files..."
-curl -O https://raw.githubusercontent.com/VaniSatya/VM_APM/master/main.py
-curl -O https://raw.githubusercontent.com/VaniSatya/VM_APM/master/web_apm.py
-curl -O https://raw.githubusercontent.com/VaniSatya/VM_APM/master/server_apm.py
-curl -O https://raw.githubusercontent.com/VaniSatya/VM_APM/master/requirements.txt
-curl -o static/Dashboard.html https://raw.githubusercontent.com/VaniSatya/VM_APM/master/static/Dashboard.html
-
-# Install required Python packages
+# Install dependencies
 echo "📦 Installing Python packages..."
-pip3 install --user -r requirements.txt
+pip3 install -r requirements.txt --user
 
-# Start the FastAPI app
-echo "🚀 Starting APM Agent..."
-nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8010 > apm.log 2>&1 &
+# Export API endpoint
+export API_ENDPOINT="https://your-render-app.onrender.com/metrics/upload"  # 🔁 Replace this
 
-echo "✅ APM Agent installed and running at http://<VM-IP>:8010/"
+# Run both scripts in background
+echo "🚀 Starting APM agents..."
+nohup python3 server_apm.py > server_apm.log 2>&1 &
+nohup python3 web_apm.py > web_apm.log 2>&1 &
+
+echo "✅ VM APM agents are running."

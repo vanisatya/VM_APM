@@ -2,15 +2,24 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>📊 Live APM Dashboard</title>
+  <title>📊 VM APM Dashboard</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f7f7f7;
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { color: #2c3e50; }
+    .button-group { margin-bottom: 20px; }
+    button {
+      padding: 10px 18px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 5px;
+      background: #3498db;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
     }
-    h1 {
-      color: #2c3e50;
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
     .app-card {
       background: white;
@@ -19,78 +28,75 @@
       margin-bottom: 20px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
+    .section-title {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #34495e;
+    }
     .metric {
       margin-left: 20px;
-    }
-    .install-btn {
-      background-color: #007bff;
-      color: white;
-      padding: 10px 20px;
-      margin-bottom: 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    .install-btn:hover {
-      background-color: #0056b3;
+      color: #555;
     }
   </style>
 </head>
 <body>
+  <h1>📊 VM Application Performance Monitoring</h1>
 
-  <h1>📊 Live Application Performance Metrics</h1>
+  <div class="button-group">
+    <button id="installBtn" onclick="installAgent()">Install VM APM</button>
+    <button id="metricsBtn" onclick="fetchMetrics()" disabled>Live APM Metrics</button>
+  </div>
 
-  <button class="install-btn" onclick="copyInstall()">📥 Install APM Agent</button>
-  <p id="install-instruction" style="margin-bottom: 30px;"></p>
-
-  <div id="dashboard">Loading...</div>
+  <div id="dashboard">No metrics yet...</div>
 
   <script>
+    function installAgent() {
+      fetch("/install", { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+          alert("✅ VM APM Installed Successfully!");
+          document.getElementById("installBtn").disabled = true;
+          document.getElementById("metricsBtn").disabled = false;
+        })
+        .catch(err => {
+          console.error(err);
+          alert("❌ Installation failed!");
+        });
+    }
+
     async function fetchMetrics() {
       try {
         const response = await fetch("/metrics");
         const data = await response.json();
         const container = document.getElementById("dashboard");
-        container.innerHTML = "";
+        container.innerHTML = "";  // Clear existing data
 
         for (const [appName, metrics] of Object.entries(data)) {
           const card = document.createElement("div");
           card.className = "app-card";
 
-          let web = metrics.web_apm || {};
-          let server = metrics.server_apm || {};
+          const web = metrics.web_apm || {};
+          const server = metrics.server_apm || {};
 
           card.innerHTML = `
             <h2>${appName}</h2>
-            <h3>▶ Web APM:</h3>
+
+            <div class="section-title">▶ Web APM</div>
             <div class="metric">Request Count: ${web["Request Count"] ?? "N/A"}</div>
             <div class="metric">Avg Response Time (ms): ${web["Avg Response Time (ms)"] ?? "N/A"}</div>
-            <div class="metric">Status Code: ${web["Status Code"] ?? "N/A"}</div>
-            <h3>▶ Server APM:</h3>
-            <div class="metric">CPU Usage: ${server["CPU (%)"] ?? "N/A"}%</div>
-            <div class="metric">Memory Usage: ${server["Memory (MB)"] ?? "N/A"} MB</div>
-          `;
 
+            <div class="section-title">▶ Server APM</div>
+            <div class="metric">CPU (%): ${server["CPU (%)"] ?? "N/A"}</div>
+            <div class="metric">Memory (MB): ${server["Memory (MB)"] ?? "N/A"}</div>
+            <div class="metric">Uptime Since: ${server["Uptime Since"] ?? "N/A"}</div>
+          `;
           container.appendChild(card);
         }
-      } catch (error) {
-        console.error("Failed to fetch metrics:", error);
+      } catch (err) {
+        console.error("Failed to fetch metrics:", err);
+        alert("❌ Failed to fetch metrics");
       }
     }
-
-    function copyInstall() {
-      const installCmd = `curl -s https://raw.githubusercontent.com/<your-username>/VM_APM/master/install.sh | bash`;
-      navigator.clipboard.writeText(installCmd).then(() => {
-        const msg = document.getElementById("install-instruction");
-        msg.innerHTML = `✅ Install command copied to clipboard!<br>👉 Paste it into your Linux VM terminal to deploy the APM agent.`;
-      });
-    }
-
-    // Refresh every 10s
-    fetchMetrics();
-    setInterval(fetchMetrics, 10000);
   </script>
-
 </body>
 </html>

@@ -1,49 +1,56 @@
-import socket
-import requests
-import psutil
+import os
+import json
 import time
+import requests
+import socket
+from datetime import datetime
 
-def discover_web_apps():
+API_ENDPOINT = os.getenv("API_ENDPOINT", "https://your-render-app.onrender.com/metrics/upload")
+HOSTNAME = socket.gethostname()
+PARENT_DIR = os.getenv("APPS_BASE_DIR", "/")  # default to root if unspecified
+
+def discover_apps(base_dir):
     apps = []
-    for conn in psutil.net_connections(kind="inet"):
-        if conn.status == psutil.CONN_LISTEN and conn.laddr.port in (80, 443) or conn.laddr.port >= 8000:
-            pid = conn.pid
-            if pid:
-                try:
-                    proc = psutil.Process(pid)
-                    name = proc.name()
-                    apps.append({
-                        "port": conn.laddr.port,
-                        "pid": pid,
-                        "name": name,
-                        "url": f"http://localhost:{conn.laddr.port}"
-                    })
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
+    for root, dirs, files in os.walk(base_dir):
+        if "logs" in dirs:
+            log_path = os.path.join(root, "logs", "access.log")
+            if os.path.isfile(log_path):
+                app_name = os.path.basename(os.path.dirname(root))
+                apps.append((f"{HOSTNAME}::{app_name}", log_path))
     return apps
 
-def get_web_apm(app):
+def summarize_web_apm(log_path):
     try:
-        start = time.time()
-        res = requests.get(app["url"], timeout=2)
-        duration = (time.time() - start) * 1000  # ms
+        with open(log_path) as f:
+            logs = [json.loads(line) for line in f.readlines()[-200:] if '"type": "web_apm"' in line]
+        if not logs:
+            return {}
+        count = len(logs)
+        avg_resp_time = sum(log.get("response_time", 0) for log in logs) / count
         return {
-            "Request Count": 1,  # In real use, count over time
-            "Avg Response Time (ms)": round(duration, 2),
-            "Status Code": res.status_code
+            "Request Count": count,
+            "Avg Response Time (ms)": round(avg_resp_time, 2)
         }
-    except Exception:
-        return {
-            "Request Count": 1,
-            "Avg Response Time (ms)": -1,
-            "Status Code": "Error"
-        }
+    except Exception as e:
+        return {}
 
-def collect_all_web_apm():
-    apps = discover_web_apps()
-    apm_data = {}
-    for app in apps:
-        apm_data[f"{app['name']}:{app['port']}"] = {
-            "web_apm": get_web_apm(app)
-        }
-    return apm_data
+def collect_and_push_web_apm():
+    while True:
+        apps = discover_apps(PARENT_DIR)
+        payload = {}
+
+        for app_id, log_path in apps:
+            web_metrics = summarize_web_apm(log_path)
+            if web_metrics:
+                payload[app_id] = {"web_apm": web_metrics}
+
+        try:
+            requests.post(API_ENDPOINT, json=payload)
+            print(f"[{datetime.now()}] ✅ Web APM pushed")
+        except Exception as e:
+            print(f"[{datetime.now()}] ❌ Failed to push web APM:", e)
+
+        time.sleep(60)
+
+if __name__ == "__main__":
+    collect_and_push_web_apm()

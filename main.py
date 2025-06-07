@@ -1,40 +1,36 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-import time
+from subprocess import Popen
+import os
 
 app = FastAPI()
-
-# Serve static dashboard
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+metrics_dict = {}
 
 @app.get("/")
 def serve_dashboard():
     return FileResponse("static/Dashboard.html")
 
-# Allow CORS (so VM or frontend can talk to this API)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # You can restrict to specific domains if needed
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# In-memory store: { vm_id: { app_key: { web_apm, server_apm } } }
-global_metrics = {}
+@app.post("/install")
+def install_vm_apm():
+    """Simulate VM install trigger. In real world, this might SSH or notify a deployment tool."""
+    # For local testing only:
+    try:
+        Popen(["bash", "install.sh"])
+        return {"status": "install triggered"}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
 
 @app.post("/metrics/upload")
-async def upload_metrics(request: Request):
-    data = await request.json()
-    vm_id = data.get("vm_id")
-    metrics = data.get("metrics")
-    if vm_id and metrics:
-        global_metrics[vm_id] = metrics
-        return {"status": "success", "message": f"Metrics received from {vm_id}"}
-    return {"status": "error", "message": "Invalid data format"}
+async def upload_metrics(payload: dict):
+    for app_name, metrics in payload.items():
+        if app_name not in metrics_dict:
+            metrics_dict[app_name] = {}
+        metrics_dict[app_name].update(metrics)
+    return {"status": "success"}
 
 @app.get("/metrics")
-def get_all_metrics():
-    return JSONResponse(content=global_metrics)
+def get_metrics():
+    return JSONResponse(content=metrics_dict)
