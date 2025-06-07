@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>📊 Live APM Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .app-card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .metric {
+      margin-left: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h1> Real-Time APM Dashboard</h1>
+  <div id="dashboard">Loading...</div>
+
+  <script>
+    async function fetchMetrics() {
+      try {
+        const response = await fetch("/metrics");
+        const data = await response.json();
+        const container = document.getElementById("dashboard");
+        container.innerHTML = "";
+
+        for (const [appName, metrics] of Object.entries(data)) {
+          const card = document.createElement("div");
+          card.className = "app-card";
+
+          card.innerHTML = `
+            <h2>${appName}</h2>
+            <div class="metric"><strong>Type:</strong> ${metrics.type ?? "N/A"}</div>
+            <div class="metric"><strong>CPU Usage:</strong> ${metrics.cpu_usage ?? "N/A"}%</div>
+            <div class="metric"><strong>Memory Usage:</strong> ${metrics.memory_usage ?? "N/A"}%</div>
+            <div class="metric"><strong>Disk Usage:</strong> ${metrics.disk_usage ?? "N/A"}%</div>
+            <div class="metric"><strong>Request Count:</strong> ${metrics.request_count ?? "N/A"}</div>
+            <div class="metric"><strong>Avg Response Time (ms):</strong> ${metrics.avg_response_time_ms ?? "N/A"}</div>
+            <div class="metric"><strong>Error Rate:</strong> ${metrics.error_rate ?? "N/A"}</div>
+            <div class="metric"><strong>Last Updated:</strong> ${new Date((metrics.received_at || 0) * 1000).toLocaleTimeString()}</div>
+          `;
+
+          container.appendChild(card);
+        }
+      } catch (error) {
+        document.getElementById("dashboard").innerHTML = "❌ Failed to load metrics.";
+        console.error(error);
+      }
+    }
+
+    fetchMetrics();
+    setInterval(fetchMetrics, 5000); // refresh every 5 seconds
+  </script>
+</body>
+</html>
