@@ -4,7 +4,7 @@ echo "📦 Installing APM Agent..."
 
 # Create working directory
 mkdir -p ~/apm_agent/static
-cd ~/apm_agent
+cd ~/apm_agent || exit 1
 
 # Download Python files from GitHub
 echo "📥 Downloading files..."
