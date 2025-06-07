@@ -5,7 +5,7 @@ import socket
 import os
 from datetime import datetime
 
-API_ENDPOINT = os.getenv("API_ENDPOINT", "https://your-render-app.onrender.com/metrics/upload")
+API_ENDPOINT = os.getenv("API_ENDPOINT", "http://127.0.0.1:8000/metrics/upload")
 HOSTNAME = socket.gethostname()
 
 def get_server_apm(pid):
@@ -47,9 +47,10 @@ def collect_and_push_server_apm():
                         continue
 
         try:
-            requests.post(API_ENDPOINT, json=apm)
+            res = requests.post(API_ENDPOINT, json=apm)
+            print(f"[{datetime.now()}] ✅ Server APM pushed: {res.status_code}", flush=True)
         except Exception as e:
-            print(f"[SERVER APM ERROR] {e}")
+            print(f"[{datetime.now()}] ❌ Failed to push Server APM: {e}", flush=True)
 
         time.sleep(60)
 
