@@ -48,9 +48,8 @@ def collect_and_push_server_apm():
 
         try:
             requests.post(API_ENDPOINT, json=apm)
-            print(f"[{datetime.now()}] ✅ Server APM pushed")
         except Exception as e:
-            print(f"[{datetime.now()}] ❌ Failed to push server APM:", e)
+            print(f"[SERVER APM ERROR] {e}")
 
         time.sleep(60)
 

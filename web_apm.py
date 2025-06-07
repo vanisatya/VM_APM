@@ -7,7 +7,7 @@ from datetime import datetime
 
 API_ENDPOINT = os.getenv("API_ENDPOINT", "https://your-render-app.onrender.com/metrics/upload")
 HOSTNAME = socket.gethostname()
-PARENT_DIR = os.getenv("APPS_BASE_DIR", "/")  # default to root if unspecified
+PARENT_DIR = os.getenv("APPS_BASE_DIR", "/")
 
 def discover_apps(base_dir):
     apps = []
@@ -46,9 +46,8 @@ def collect_and_push_web_apm():
 
         try:
             requests.post(API_ENDPOINT, json=payload)
-            print(f"[{datetime.now()}] ✅ Web APM pushed")
         except Exception as e:
-            print(f"[{datetime.now()}] ❌ Failed to push web APM:", e)
+            print(f"[WEB APM ERROR] {e}")
 
         time.sleep(60)
 

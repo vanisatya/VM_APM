@@ -1,8 +1,6 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from subprocess import Popen
-import os
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -12,16 +10,6 @@ metrics_dict = {}
 @app.get("/")
 def serve_dashboard():
     return FileResponse("static/Dashboard.html")
-
-@app.post("/install")
-def install_vm_apm():
-    """Simulate VM install trigger. In real world, this might SSH or notify a deployment tool."""
-    # For local testing only:
-    try:
-        Popen(["bash", "install.sh"])
-        return {"status": "install triggered"}
-    except Exception as e:
-        return {"status": "failed", "error": str(e)}
 
 @app.post("/metrics/upload")
 async def upload_metrics(payload: dict):
