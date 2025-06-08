@@ -47,6 +47,7 @@ def collect_and_push_server_apm():
                         continue
 
         try:
+            print(f"📦 Sending Server APM payload: {json.dumps(payload, indent=2)}")
             res = requests.post(API_ENDPOINT, json=apm)
             print(f"[{datetime.now()}] ✅ Server APM pushed: {res.status_code}", flush=True)
         except Exception as e:

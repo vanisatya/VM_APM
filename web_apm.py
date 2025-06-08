@@ -45,6 +45,7 @@ def collect_and_push_web_apm():
                 payload[app_id] = {"web_apm": web_metrics}
 
         try:
+            print(f"📦 Sending Web APM payload: {json.dumps(payload, indent=2)}")
             res = requests.post(API_ENDPOINT, json=payload)
             print(f"[{datetime.now()}] ✅ Web APM pushed: {res.status_code}", flush=True)
         except Exception as e:
