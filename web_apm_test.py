@@ -7,24 +7,28 @@ from datetime import datetime
 HOSTNAME = socket.gethostname()
 
 def get_open_http_ports():
+    """Scan all TCP ports and return those that are likely running web apps."""
     ports = set()
     try:
         result = subprocess.run(["ss", "-tln"], capture_output=True, text=True)
         for line in result.stdout.splitlines():
-            if "LISTEN" in line:
-                parts = line.split()
-                address = parts[-1]
-                if ':' in address:
-                    port_str = address.split(":")[-1]
-                    if port_str.isdigit():
-                        port = int(port_str)
-                        if 80 <= port <= 9000:
+            if "LISTEN" not in line:
+                continue
+            parts = line.split()
+            for part in parts:
+                if ':' in part:
+                    try:
+                        port = int(part.rsplit(":", 1)[-1])
+                        if 1 <= port <= 65535:
                             ports.add(port)
+                    except ValueError:
+                        continue
     except Exception as e:
         print(f"❌ Error scanning ports: {e}")
     return sorted(ports)
 
 def is_web_app(port):
+    """Check if a given port responds to HTTP GET."""
     try:
         response = requests.get(f"http://localhost:{port}", timeout=2)
         return response.status_code < 600
@@ -32,6 +36,7 @@ def is_web_app(port):
         return False
 
 def collect_web_apm(port):
+    """Measure latency and status code for a given web app port."""
     try:
         start = time.time()
         response = requests.get(f"http://localhost:{port}", timeout=2)
