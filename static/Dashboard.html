@@ -53,7 +53,7 @@
 
   <div class="button-group">
     <button id="installBtn" onclick="showInstallInstructions()">Install VM APM</button>
-    <button id="metricsBtn" onclick="fetchMetrics()" disabled>Live APM Metrics</button>
+    <button id="metricsBtn" onclick="fetchMetrics()">Live APM Metrics</button>
   </div>
 
   <div id="instructionBox">
@@ -64,25 +64,29 @@
   <div id="dashboard">No metrics yet...</div>
 
   <script>
+    const installBtn = document.getElementById("installBtn");
+    const metricsBtn = document.getElementById("metricsBtn");
+    const dashboard = document.getElementById("dashboard");
+    const instructionBox = document.getElementById("instructionBox");
+
     function showInstallInstructions() {
-      document.getElementById("instructionBox").style.display = "block";
+      instructionBox.style.display = "block";
     }
 
     async function fetchMetrics() {
       try {
         const response = await fetch("/metrics");
         const data = await response.json();
-        const container = document.getElementById("dashboard");
-        container.innerHTML = "";
+        dashboard.innerHTML = "";
 
         if (Object.keys(data).length === 0) {
-          alert("⚠️ No metrics received yet. Please install the VM APM agent.");
+          dashboard.innerHTML = "⚠️ No metrics received yet.";
+          metricsBtn.disabled = true;
           return;
         }
 
-        // Once data is available, update button states
-        document.getElementById("installBtn").disabled = true;
-        document.getElementById("metricsBtn").disabled = false;
+        installBtn.disabled = true;
+        metricsBtn.disabled = false;
 
         for (const [appName, metrics] of Object.entries(data)) {
           const card = document.createElement("div");
@@ -103,15 +107,21 @@
             <div class="metric">Memory (MB): ${server["Memory (MB)"] ?? "N/A"}</div>
             <div class="metric">Uptime Since: ${server["Uptime Since"] ?? "N/A"}</div>
           `;
-          container.appendChild(card);
+          dashboard.appendChild(card);
         }
       } catch (err) {
         console.error("Failed to fetch metrics:", err);
-        alert("❌ Failed to fetch metrics");
+        dashboard.innerHTML = "❌ Unable to reach metrics endpoint.";
+        metricsBtn.disabled = true;
       }
     }
 
-    // Optionally poll every 30 sec to auto-enable button
+    // Initial fetch on page load
+    window.onload = () => {
+      fetchMetrics();
+    };
+
+    // Auto-refresh every 30 seconds
     setInterval(fetchMetrics, 30000);
   </script>
 </body>
