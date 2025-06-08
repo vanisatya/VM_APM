@@ -6,7 +6,7 @@ from datetime import datetime
 import json
 
 HOSTNAME = socket.gethostname()
-API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
+API_ENDPOINT = "API_ENDPOINT = "http://52.170.6.111:8030/metrics/upload"
 
 def get_open_http_ports():
     """Scan all TCP ports and return those that are likely running web apps."""
