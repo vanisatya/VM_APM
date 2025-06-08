@@ -1,57 +1,60 @@
 import os
 import json
 import time
-import requests
 import socket
+import requests
+from collections import defaultdict
 from datetime import datetime
 
 API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
 HOSTNAME = socket.gethostname()
-PARENT_DIR = os.getenv("APPS_BASE_DIR", "/")
+PARENT_DIR = "/home"  # Works across all VMs
 
 def discover_apps(base_dir):
     apps = []
-    for root, dirs, files in os.walk(base_dir):
-        if "logs" in dirs:
-            log_path = os.path.join(root, "logs", "access.log")
-            if os.path.isfile(log_path):
-                app_name = os.path.basename(os.path.dirname(root))
-                apps.append((f"{HOSTNAME}::{app_name}", log_path))
+    for user_dir in os.listdir(base_dir):
+        user_path = os.path.join(base_dir, user_dir)
+        if os.path.isdir(user_path):
+            for app in os.listdir(user_path):
+                app_path = os.path.join(user_path, app)
+                logs_path = os.path.join(app_path, "logs", "web_apm.log")
+                if os.path.isfile(logs_path):
+                    apps.append((app, logs_path))
     return apps
 
 def summarize_web_apm(log_path):
     try:
-        with open(log_path) as f:
+        with open(log_path, 'r') as f:
             logs = [json.loads(line) for line in f.readlines()[-200:] if '"type": "web_apm"' in line]
         if not logs:
             return {}
-        count = len(logs)
-        avg_resp_time = sum(log.get("response_time", 0) for log in logs) / count
+
+        total_requests = len(logs)
+        avg_response_time = sum(log.get("response_time_ms", 0) for log in logs) / total_requests
+
         return {
-            "Request Count": count,
-            "Avg Response Time (ms)": round(avg_resp_time, 2)
+            "Request Count": total_requests,
+            "Avg Response Time (ms)": round(avg_response_time, 2)
         }
     except Exception as e:
+        print(f"❌ Error reading {log_path}: {e}")
         return {}
 
-def collect_and_push_web_apm():
-    while True:
-        apps = discover_apps(PARENT_DIR)
-        payload = {}
+def push_metrics():
+    payload = {}
+    for app_name, log_path in discover_apps(PARENT_DIR):
+        web_metrics = summarize_web_apm(log_path)
+        if web_metrics:
+            payload[app_name] = {"web_apm": web_metrics}
 
-        for app_id, log_path in apps:
-            web_metrics = summarize_web_apm(log_path)
-            if web_metrics:
-                payload[app_id] = {"web_apm": web_metrics}
-
-        try:
-            print(f"📦 Sending Web APM payload: {json.dumps(payload, indent=2)}")
-            res = requests.post(API_ENDPOINT, json=payload)
-            print(f"[{datetime.now()}] ✅ Web APM pushed: {res.status_code}", flush=True)
-        except Exception as e:
-            print(f"[{datetime.now()}] ❌ Failed to push Web APM: {e}", flush=True)
-
-        time.sleep(60)
+    print(f"📦 Sending Web APM payload: {json.dumps(payload)}")
+    try:
+        res = requests.post(API_ENDPOINT, json={"hostname": HOSTNAME, "metrics": payload})
+        print(f"[{datetime.now()}] ✅ Web APM pushed: {res.status_code}")
+    except Exception as e:
+        print(f"[{datetime.now()}] ❌ Failed to push Web APM: {e}")
 
 if __name__ == "__main__":
-    collect_and_push_web_apm()
+    while True:
+        push_metrics()
+        time.sleep(60)
