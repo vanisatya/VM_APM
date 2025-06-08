@@ -1,22 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 metrics_dict = {}
 
-# Allow CORS (optional but helpful if your dashboard is web-based)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 @app.get("/")
 def root():
-    return {"message": "VM APM Dashboard API is running"}
+    return {"message": "VM APM dashboard is running"}
 
 @app.post("/metrics/upload")
 async def upload_metrics(request: Request):

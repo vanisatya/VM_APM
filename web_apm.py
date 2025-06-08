@@ -2,53 +2,47 @@ import socket
 import time
 import requests
 import subprocess
-import json
 from datetime import datetime
+import json
 
-API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
 HOSTNAME = socket.gethostname()
-
+API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
 
 def get_open_http_ports():
-    """Scan all TCP listening ports and identify HTTP servers"""
+    """Scan all TCP ports and return those that are likely running web apps."""
     ports = set()
     try:
-        # Run 'ss' to get all listening TCP ports
         result = subprocess.run(["ss", "-tln"], capture_output=True, text=True)
         for line in result.stdout.splitlines():
-            if "LISTEN" in line:
-                parts = line.split()
-                address = parts[-1]
-                if ':' in address:
-                    port_str = address.split(":")[-1]
-                    if port_str.isdigit():
-                        port = int(port_str)
-                        # Limit to common web port range
-                        if 80 <= port <= 9000:
+            if "LISTEN" not in line:
+                continue
+            parts = line.split()
+            for part in parts:
+                if ':' in part:
+                    try:
+                        port = int(part.rsplit(":", 1)[-1])
+                        if 1 <= port <= 65535:
                             ports.add(port)
+                    except ValueError:
+                        continue
     except Exception as e:
-        print(f"❌ Error while scanning ports: {e}")
+        print(f"❌ Error scanning ports: {e}")
     return sorted(ports)
 
-
 def is_web_app(port):
-    """Check if the given port responds to HTTP GET request"""
+    """Check if a given port responds to HTTP GET."""
     try:
         response = requests.get(f"http://localhost:{port}", timeout=2)
         return response.status_code < 600
     except Exception:
         return False
 
-
 def collect_web_apm(port):
-    """Collect response time and status code for a single port"""
+    """Measure latency and status code for a given web app port."""
     try:
         start = time.time()
         response = requests.get(f"http://localhost:{port}", timeout=2)
-        end = time.time()
-
-        latency_ms = round((end - start) * 1000, 2)
-
+        latency_ms = round((time.time() - start) * 1000, 2)
         return {
             "Request Count": 1,
             "Avg Response Time (ms)": latency_ms,
@@ -61,26 +55,37 @@ def collect_web_apm(port):
             "Error": str(e)
         }
 
+def push_metrics_to_render(metrics):
+    """Push the collected Web APM metrics to the central Render API."""
+    try:
+        payload = {
+            "hostname": HOSTNAME,
+            "metrics": metrics
+        }
+        print(f"📦 Sending Web APM payload: {json.dumps(payload, indent=2)}")
+        res = requests.post(API_ENDPOINT, json=payload, timeout=5)
+        print(f"[{datetime.now()}] ✅ Web APM pushed to Render: {res.status_code}")
+    except Exception as e:
+        print(f"[{datetime.now()}] ❌ Failed to push metrics to Render: {e}")
 
-def push_metrics():
+def run_once():
     open_ports = get_open_http_ports()
-    payload = {}
+    print(f"🔍 Detected open ports: {open_ports}")
 
+    metrics = {}
     for port in open_ports:
         if is_web_app(port):
             apm = collect_web_apm(port)
             app_key = f"app_on_port_{port}"
-            payload[app_key] = {"web_apm": apm}
+            metrics[app_key] = {"web_apm": apm}
 
-    print(f"📦 Sending Web APM payload: {json.dumps(payload)}")
-    try:
-        res = requests.post(API_ENDPOINT, json={"hostname": HOSTNAME, "metrics": payload})
-        print(f"[{datetime.now()}] ✅ Web APM pushed: {res.status_code}")
-    except Exception as e:
-        print(f"[{datetime.now()}] ❌ Failed to push Web APM: {e}")
-
+    if not metrics:
+        print(f"[{datetime.now()}] ⚠️ No web applications detected.")
+    else:
+        print(f"[{datetime.now()}] ✅ Web APM metrics:")
+        for app, apm in metrics.items():
+            print(f"  {app}: {apm}")
+        push_metrics_to_render(metrics)
 
 if __name__ == "__main__":
-    while True:
-        push_metrics()
-        time.sleep(60)
+    run_once()
