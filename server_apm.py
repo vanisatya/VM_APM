@@ -3,10 +3,11 @@ import requests
 import time
 import socket
 import os
+import json
 from datetime import datetime
 
-API_ENDPOINT = "https://vm-apm.onrender.com/metrics/upload"
 HOSTNAME = socket.gethostname()
+API_ENDPOINT = os.getenv("APM_SERVER_ENDPOINT", "http://52.170.6.111:8030/metrics/upload")  # Azure endpoint
 
 def get_server_apm(pid):
     try:
@@ -29,7 +30,7 @@ def get_server_apm(pid):
 
 def collect_and_push_server_apm():
     while True:
-        apm = {}
+        metrics = {}
         seen = set()
 
         for conn in psutil.net_connections(kind="inet"):
@@ -40,15 +41,19 @@ def collect_and_push_server_apm():
                 if pid and port and (pid, port) not in seen:
                     seen.add((pid, port))
                     try:
-                        proc_name = psutil.Process(pid).name()
-                        key = f"{HOSTNAME}::{proc_name}:{port}"
-                        apm[key] = {"server_apm": get_server_apm(pid)}
+                        app_key = f"app_on_port_{port}"
+                        metrics[app_key] = {"server_apm": get_server_apm(pid)}
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         continue
 
+        payload = {
+            "hostname": HOSTNAME,
+            "metrics": metrics
+        }
+
         try:
             print(f"📦 Sending Server APM payload: {json.dumps(payload, indent=2)}")
-            res = requests.post(API_ENDPOINT, json=apm)
+            res = requests.post(API_ENDPOINT, json=payload)
             print(f"[{datetime.now()}] ✅ Server APM pushed: {res.status_code}", flush=True)
         except Exception as e:
             print(f"[{datetime.now()}] ❌ Failed to push Server APM: {e}", flush=True)
