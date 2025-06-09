@@ -19,7 +19,7 @@ def write_metrics(data):
 
 @app.get("/")
 def root():
-    return FileResponse("dashboard.html", media_type="text/html")
+    return FileResponse("Dashboard.html", media_type="text/html")
 
 @app.post("/metrics/upload")
 async def upload_metrics(request: Request):
