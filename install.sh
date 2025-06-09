@@ -1,32 +1,33 @@
 #!/bin/bash
 
-# Ensure Unix line endings
-command -v dos2unix >/dev/null 2>&1 || sudo apt-get update && sudo apt-get install -y dos2unix
+echo "🔧 Installing VM APM agents..."
 
-echo "📦 Installing VM APM components..."
+# Ensure script is run from the correct directory
+cd "$(dirname "$0")"
 
-# Clean up existing APM processes
-pkill -f web_apm.py
+# Make scripts executable
+chmod +x server_apm.py web_apm.py
+
+# Install required packages
+echo "📦 Installing dependencies..."
+sudo apt-get update -y
+sudo apt-get install -y python3-pip curl lsof net-tools
+
+# Install Python packages
+pip3 install --upgrade pip
+pip3 install psutil requests
+
+# Kill any previous instances
+echo "🧹 Cleaning up old APM agents..."
 pkill -f server_apm.py
+pkill -f web_apm.py
 
-# Download files
-curl -s -O https://raw.githubusercontent.com/vanisatya/VM_APM/master/server_apm.py
-curl -s -O https://raw.githubusercontent.com/vanisatya/VM_APM/master/web_apm.py
-curl -s -O https://raw.githubusercontent.com/vanisatya/VM_APM/master/requirements.txt
-
-# Convert to Unix format
-dos2unix server_apm.py web_apm.py requirements.txt
-
-# Install Python dependencies
-pip3 install --user -r requirements.txt
-
-# Set API endpoint
-export API_ENDPOINT="https://vm-apm.onrender.com/metrics/upload"
-
-echo "🚀 Starting APM agents with endpoint: $API_ENDPOINT"
-
-# Start agents in background
-nohup python3 server_apm.py > server_apm.log 2>&1 &
+# Start Web APM (user permissions are fine)
+echo "🚀 Starting Web APM..."
 nohup python3 web_apm.py > web_apm.log 2>&1 &
 
-echo "✅ VM APM agents installed and running."
+# Start Server APM (needs sudo)
+echo "🚀 Starting Server APM with sudo..."
+nohup sudo python3 server_apm.py > server_apm.log 2>&1 &
+
+echo "✅ VM APM agents installed and running in background."

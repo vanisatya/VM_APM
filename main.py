@@ -1,36 +1,25 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, FileResponse
+import subprocess
 import json
 import os
 
 app = FastAPI()
-
-# Serve dashboard.html and install scripts
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 STORAGE_FILE = "metrics_store.json"
 
 def read_metrics():
     if not os.path.exists(STORAGE_FILE):
         return {}
-    try:
-        with open(STORAGE_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    with open(STORAGE_FILE, "r") as f:
+        return json.load(f)
 
 def write_metrics(data):
     with open(STORAGE_FILE, "w") as f:
         json.dump(data, f)
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def root():
-    try:
-        with open("static/Dashboard.html", "r") as f:
-            return f.read()
-    except:
-        return HTMLResponse("<h1>VM APM Dashboard is running, but dashboard.html not found</h1>")
+    return FileResponse("dashboard.html", media_type="text/html")
 
 @app.post("/metrics/upload")
 async def upload_metrics(request: Request):
@@ -47,10 +36,21 @@ async def upload_metrics(request: Request):
 
         write_metrics(all_metrics)
         return JSONResponse(content={"status": "success"}, status_code=200)
-
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.get("/metrics")
 def get_metrics():
     return read_metrics()
+
+@app.post("/install")
+async def install_apm_agents():
+    try:
+        result = subprocess.run(["bash", "install.sh"], capture_output=True, text=True)
+        return {
+            "status": "success",
+            "output": result.stdout,
+            "error": result.stderr
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
