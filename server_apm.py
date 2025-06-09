@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 
 HOSTNAME = socket.gethostname()
-API_ENDPOINT = os.getenv("APM_SERVER_ENDPOINT", "http://52.170.6.111:8030/metrics/upload")  # Azure endpoint
+API_ENDPOINT = os.getenv("APM_SERVER_ENDPOINT", "http://52.170.6.111:8030/metrics/upload")
 
 def get_server_apm(pid):
     try:
@@ -33,18 +33,22 @@ def collect_and_push_server_apm():
         metrics = {}
         seen = set()
 
+        # First collect for processes with open ports
         for conn in psutil.net_connections(kind="inet"):
             if conn.status == psutil.CONN_LISTEN:
                 pid = conn.pid
                 port = conn.laddr.port
-
                 if pid and port and (pid, port) not in seen:
                     seen.add((pid, port))
-                    try:
-                        app_key = f"app_on_port_{port}"
-                        metrics[app_key] = {"server_apm": get_server_apm(pid)}
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        continue
+                    metrics[f"app_on_port_{port}"] = {"server_apm": get_server_apm(pid)}
+
+        # Then collect for all other top-level processes (not already captured)
+        for proc in psutil.process_iter(['pid', 'name']):
+            pid = proc.info['pid']
+            name = proc.info['name']
+            if all(pid != s[0] for s in seen):
+                key = f"proc_{pid}_{name}"
+                metrics[key] = {"server_apm": get_server_apm(pid)}
 
         payload = {
             "hostname": HOSTNAME,
