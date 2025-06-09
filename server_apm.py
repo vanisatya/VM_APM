@@ -1,19 +1,50 @@
 import psutil
 import requests
-import time
 import socket
+import time
 import json
+import os
 from datetime import datetime
+import subprocess
 
-API_ENDPOINT = "http://52.170.6.111:8030/metrics/upload"  # Azure VM backend
 HOSTNAME = socket.gethostname()
+API_ENDPOINT = os.getenv("APM_SERVER_ENDPOINT", "http://52.170.6.111:8030/metrics/upload")
+
+def get_open_http_ports():
+    ports = set()
+    try:
+        result = subprocess.run(["ss", "-tln"], capture_output=True, text=True)
+        for line in result.stdout.splitlines():
+            if "LISTEN" not in line:
+                continue
+            parts = line.split()
+            for part in parts:
+                if ':' in part:
+                    try:
+                        port = int(part.rsplit(":", 1)[-1])
+                        if 1 <= port <= 65535:
+                            ports.add(port)
+                    except ValueError:
+                        continue
+    except Exception as e:
+        print(f"❌ Error scanning ports: {e}")
+    return sorted(ports)
+
+def get_pid_for_port(port):
+    try:
+        for conn in psutil.net_connections(kind="inet"):
+            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port and conn.pid:
+                return conn.pid
+    except Exception:
+        return None
+    return None
 
 def get_server_apm(pid):
     try:
         proc = psutil.Process(pid)
         with proc.oneshot():
             cpu = proc.cpu_percent(interval=1)
-            mem = proc.memory_info().rss / (1024 ** 2)  # MB
+            mem = proc.memory_info().rss / (1024 ** 2)
             create_time = datetime.fromtimestamp(proc.create_time()).strftime("%Y-%m-%d %H:%M:%S")
         return {
             "CPU (%)": round(cpu, 2),
@@ -27,37 +58,18 @@ def get_server_apm(pid):
             "Uptime Since": "N/A"
         }
 
-def collect_and_push_server_apm():
-    while True:
-        metrics = {
-            "hostname": HOSTNAME,
-            "metrics": {}
-        }
+def run_once():
+    ports = get_open_http_ports()
+    print(f"🔍 Detected open ports: {ports}")
+    metrics = {}
 
-        seen = set()
-        for conn in psutil.net_connections(kind="inet"):
-            if conn.status == psutil.CONN_LISTEN:
-                pid = conn.pid
-                port = conn.laddr.port
+    for port in ports:
+        pid = get_pid_for_port(port)
+        if pid:
+            key = f"app_on_port_{port}"
+            metrics[key] = {"server_apm": get_server_apm(pid)}
 
-                # Focus only on web app ports
-                if pid and 8000 <= port <= 9000 and (pid, port) not in seen:
-                    seen.add((pid, port))
-                    try:
-                        proc = psutil.Process(pid)
-                        key = f"app_on_port_{port}"
-                        metrics["metrics"][key] = {"server_apm": get_server_apm(pid)}
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        continue
-
-        try:
-            print(f"📦 Sending Server APM payload: {json.dumps(metrics, indent=2)}")
-            res = requests.post(API_ENDPOINT, json=metrics)
-            print(f"[{datetime.now()}] ✅ Server APM pushed: {res.status_code}", flush=True)
-        except Exception as e:
-            print(f"[{datetime.now()}] ❌ Failed to push Server APM: {e}", flush=True)
-
-        time.sleep(60)
-
-if __name__ == "__main__":
-    collect_and_push_server_apm()
+    if not metrics:
+        print(f"[{datetime.now()}] ⚠️ No web applications detected.")
+    else:
+        payload
