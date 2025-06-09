@@ -81,38 +81,38 @@
 
         if (Object.keys(data).length === 0) {
           dashboard.innerHTML = "⚠️ No metrics received yet.";
-          metricsBtn.disabled = true;
           return;
         }
 
         installBtn.disabled = true;
-        metricsBtn.disabled = false;
 
-        for (const [appName, metrics] of Object.entries(data)) {
-          const card = document.createElement("div");
-          card.className = "app-card";
+        for (const [hostname, apps] of Object.entries(data)) {
+          for (const [appName, metrics] of Object.entries(apps)) {
+            const card = document.createElement("div");
+            card.className = "app-card";
 
-          const web = metrics.web_apm || {};
-          const server = metrics.server_apm || {};
+            const web = metrics.web_apm || {};
+            const server = metrics.server_apm || {};
 
-          card.innerHTML = `
-            <h2>${appName}</h2>
+            card.innerHTML = `
+              <h2>🖥 ${hostname} - ${appName}</h2>
 
-            <div class="section-title">▶ Web APM</div>
-            <div class="metric">Request Count: ${web["Request Count"] ?? "N/A"}</div>
-            <div class="metric">Avg Response Time (ms): ${web["Avg Response Time (ms)"] ?? "N/A"}</div>
+              <div class="section-title">▶ Web APM</div>
+              <div class="metric">Request Count: ${web["Request Count"] ?? "N/A"}</div>
+              <div class="metric">Avg Response Time (ms): ${web["Avg Response Time (ms)"] ?? "N/A"}</div>
+              <div class="metric">Status Code: ${web["Status Code"] ?? web["Error"] ?? "N/A"}</div>
 
-            <div class="section-title">▶ Server APM</div>
-            <div class="metric">CPU (%): ${server["CPU (%)"] ?? "N/A"}</div>
-            <div class="metric">Memory (MB): ${server["Memory (MB)"] ?? "N/A"}</div>
-            <div class="metric">Uptime Since: ${server["Uptime Since"] ?? "N/A"}</div>
-          `;
-          dashboard.appendChild(card);
+              <div class="section-title">▶ Server APM</div>
+              <div class="metric">CPU (%): ${server["CPU (%)"] ?? "N/A"}</div>
+              <div class="metric">Memory (MB): ${server["Memory (MB)"] ?? "N/A"}</div>
+              <div class="metric">Uptime Since: ${server["Uptime Since"] ?? "N/A"}</div>
+            `;
+            dashboard.appendChild(card);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch metrics:", err);
         dashboard.innerHTML = "❌ Unable to reach metrics endpoint.";
-        metricsBtn.disabled = true;
       }
     }
 
