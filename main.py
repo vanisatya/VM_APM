@@ -1,24 +1,36 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 import json
 import os
 
 app = FastAPI()
+
+# Serve dashboard.html and install scripts
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 STORAGE_FILE = "metrics_store.json"
 
 def read_metrics():
     if not os.path.exists(STORAGE_FILE):
         return {}
-    with open(STORAGE_FILE, "r") as f:
-        return json.load(f)
+    try:
+        with open(STORAGE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def write_metrics(data):
     with open(STORAGE_FILE, "w") as f:
         json.dump(data, f)
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root():
-    return {"message": "VM APM dashboard is running"}
+    try:
+        with open("static/dashboard.html", "r") as f:
+            return f.read()
+    except:
+        return HTMLResponse("<h1>VM APM Dashboard is running, but dashboard.html not found</h1>")
 
 @app.post("/metrics/upload")
 async def upload_metrics(request: Request):

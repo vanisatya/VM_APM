@@ -4,13 +4,12 @@ import requests
 import subprocess
 from datetime import datetime
 import json
+import os
 
 HOSTNAME = socket.gethostname()
-API_ENDPOINT = "http://52.170.6.111:8030/metrics/upload"
-
+API_ENDPOINT = os.getenv("APM_SERVER_ENDPOINT", "http://52.170.6.111:8030/metrics/upload")
 
 def get_open_http_ports():
-    """Scan all TCP ports and return those that are likely running web apps."""
     ports = set()
     try:
         result = subprocess.run(["ss", "-tln"], capture_output=True, text=True)
@@ -31,7 +30,6 @@ def get_open_http_ports():
     return sorted(ports)
 
 def is_web_app(port):
-    """Check if a given port responds to HTTP GET."""
     try:
         response = requests.get(f"http://localhost:{port}", timeout=2)
         return response.status_code < 600
@@ -39,7 +37,6 @@ def is_web_app(port):
         return False
 
 def collect_web_apm(port):
-    """Measure latency and status code for a given web app port."""
     try:
         start = time.time()
         response = requests.get(f"http://localhost:{port}", timeout=2)
@@ -56,8 +53,7 @@ def collect_web_apm(port):
             "Error": str(e)
         }
 
-def push_metrics_to_render(metrics):
-    """Push the collected Web APM metrics to the central Render API."""
+def push_metrics_to_server(metrics):
     try:
         payload = {
             "hostname": HOSTNAME,
@@ -65,9 +61,9 @@ def push_metrics_to_render(metrics):
         }
         print(f"📦 Sending Web APM payload: {json.dumps(payload, indent=2)}")
         res = requests.post(API_ENDPOINT, json=payload, timeout=5)
-        print(f"[{datetime.now()}] ✅ Web APM pushed to Render: {res.status_code}")
+        print(f"[{datetime.now()}] ✅ Web APM pushed to server: {res.status_code}")
     except Exception as e:
-        print(f"[{datetime.now()}] ❌ Failed to push metrics to Render: {e}")
+        print(f"[{datetime.now()}] ❌ Failed to push metrics: {e}")
 
 def run_once():
     open_ports = get_open_http_ports()
@@ -86,7 +82,7 @@ def run_once():
         print(f"[{datetime.now()}] ✅ Web APM metrics:")
         for app, apm in metrics.items():
             print(f"  {app}: {apm}")
-        push_metrics_to_render(metrics)
+        push_metrics_to_server(metrics)
 
 if __name__ == "__main__":
     run_once()
