@@ -27,7 +27,7 @@ def write_metrics(data):
 @app.get("/", response_class=HTMLResponse)
 def root():
     try:
-        with open("static/dashboard.html", "r") as f:
+        with open("static/Dashboard.html", "r") as f:
             return f.read()
     except:
         return HTMLResponse("<h1>VM APM Dashboard is running, but dashboard.html not found</h1>")
