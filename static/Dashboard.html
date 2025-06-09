@@ -1,92 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📊 VM APM Dashboard</title>
+  <title>VM APM Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
-    h1 { color: #2c3e50; }
-    .button-group { margin-bottom: 20px; }
-    button {
-      padding: 10px 18px;
-      margin-right: 10px;
-      border: none;
-      border-radius: 5px;
-      background: #3498db;
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
     }
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
+    h1 {
+      text-align: center;
+    }
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 16px;
+      cursor: pointer;
     }
     .app-card {
       background: white;
+      border: 1px solid #ddd;
       border-radius: 10px;
-      padding: 15px;
       margin-bottom: 20px;
+      padding: 15px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .section-title {
-      margin-top: 10px;
-      font-weight: bold;
-      color: #34495e;
     }
     .metric {
       margin-left: 20px;
-      color: #555;
-    }
-    #instructionBox {
-      margin-top: 10px;
-      padding: 10px;
-      background: #ecf0f1;
-      border-left: 4px solid #2980b9;
-      display: none;
-      font-family: monospace;
-      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>📊 VM Application Performance Monitoring</h1>
-
-  <div class="button-group">
-    <button id="installBtn" onclick="showInstallInstructions()">Install VM APM</button>
-    <button id="metricsBtn" onclick="fetchMetrics()">Live APM Metrics</button>
+  <h1>VM APM Dashboard</h1>
+  <div class="btn-group">
+    <button onclick="installAPM()">Install VM APM</button>
+    <button onclick="loadMetrics()">Live APM Metrics</button>
   </div>
-
-  <div id="instructionBox">
-    Run the following command on your VM:<br>
-    <code>curl -s https://raw.githubusercontent.com/vanisatya/VM_APM/master/install.sh | bash</code>
-  </div>
-
-  <div id="dashboard">No metrics yet...</div>
+  <div id="dashboard"></div>
 
   <script>
-    const installBtn = document.getElementById("installBtn");
-    const metricsBtn = document.getElementById("metricsBtn");
-    const dashboard = document.getElementById("dashboard");
-    const instructionBox = document.getElementById("instructionBox");
-
-    function showInstallInstructions() {
-      instructionBox.style.display = "block";
+    async function installAPM() {
+      try {
+        const res = await fetch('/install', { method: 'POST' });
+        const data = await res.json();
+        alert(`Install status: ${data.status || 'Unknown'}`);
+      } catch (err) {
+        alert('Failed to trigger install.');
+      }
     }
 
-    async function fetchMetrics() {
+    async function loadMetrics() {
       try {
         const response = await fetch("/metrics");
         const data = await response.json();
-        dashboard.innerHTML = "";
+        const container = document.getElementById("dashboard");
+        container.innerHTML = "";
 
-        if (Object.keys(data).length === 0) {
-          dashboard.innerHTML = "⚠️ No metrics received yet.";
-          return;
-        }
-
-        installBtn.disabled = true;
-
-        for (const [hostname, apps] of Object.entries(data)) {
+        for (const [host, apps] of Object.entries(data)) {
           for (const [appName, metrics] of Object.entries(apps)) {
             const card = document.createElement("div");
             card.className = "app-card";
@@ -95,34 +71,25 @@
             const server = metrics.server_apm || {};
 
             card.innerHTML = `
-              <h2>🖥 ${hostname} - ${appName}</h2>
-
-              <div class="section-title">▶ Web APM</div>
+              <h2>${host} → ${appName}</h2>
+              <h3>▶ Web APM:</h3>
               <div class="metric">Request Count: ${web["Request Count"] ?? "N/A"}</div>
               <div class="metric">Avg Response Time (ms): ${web["Avg Response Time (ms)"] ?? "N/A"}</div>
-              <div class="metric">Status Code: ${web["Status Code"] ?? web["Error"] ?? "N/A"}</div>
+              <div class="metric">Status Code: ${web["Status Code"] ?? "N/A"}</div>
+              <div class="metric">Error: ${web["Error"] ?? "None"}</div>
 
-              <div class="section-title">▶ Server APM</div>
+              <h3>▶ Server APM:</h3>
               <div class="metric">CPU (%): ${server["CPU (%)"] ?? "N/A"}</div>
               <div class="metric">Memory (MB): ${server["Memory (MB)"] ?? "N/A"}</div>
               <div class="metric">Uptime Since: ${server["Uptime Since"] ?? "N/A"}</div>
             `;
-            dashboard.appendChild(card);
+            container.appendChild(card);
           }
         }
-      } catch (err) {
-        console.error("Failed to fetch metrics:", err);
-        dashboard.innerHTML = "❌ Unable to reach metrics endpoint.";
+      } catch (error) {
+        alert("Failed to load metrics.");
       }
     }
-
-    // Initial fetch on page load
-    window.onload = () => {
-      fetchMetrics();
-    };
-
-    // Auto-refresh every 30 seconds
-    setInterval(fetchMetrics, 30000);
   </script>
 </body>
 </html>
