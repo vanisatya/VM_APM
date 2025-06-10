@@ -1,95 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>VM APM Dashboard</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    .btn-group {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 0 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .app-card {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      padding: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .metric {
-      margin-left: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>VM APM Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        pre {
+            background-color: #f3f3f3;
+            padding: 20px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            max-height: 500px;
+        }
+    </style>
 </head>
 <body>
-  <h1>VM APM Dashboard</h1>
-  <div class="btn-group">
-    <button onclick="installAPM()">Install VM APM</button>
-    <button onclick="loadMetrics()">Live APM Metrics</button>
-  </div>
-  <div id="dashboard"></div>
+    <h1>🚀 VM APM Dashboard</h1>
 
-  <script>
-    async function installAPM() {
-      try {
-        const res = await fetch('/install', { method: 'POST' });
-        const data = await res.json();
-        alert(`Install status: ${data.status || 'Unknown'}`);
-      } catch (err) {
-        alert('Failed to trigger install.');
-      }
-    }
+    <!-- Install Button -->
+    <form action="/install" method="post">
+        <button type="submit">Install VM APM</button>
+    </form>
 
-    async function loadMetrics() {
-      try {
-        const response = await fetch("/metrics");
-        const data = await response.json();
-        const container = document.getElementById("dashboard");
-        container.innerHTML = "";
+    <!-- Live APM Metrics Section -->
+    <h2>📊 Live APM Metrics (auto-refresh every 10s)</h2>
+    <pre id="metrics-output">Waiting for APM metrics...</pre>
 
-        for (const [host, apps] of Object.entries(data)) {
-          for (const [appName, metrics] of Object.entries(apps)) {
-            const card = document.createElement("div");
-            card.className = "app-card";
-
-            const web = metrics.web_apm || {};
-            const server = metrics.server_apm || {};
-
-            card.innerHTML = `
-              <h2>${host} → ${appName}</h2>
-              <h3>▶ Web APM:</h3>
-              <div class="metric">Request Count: ${web["Request Count"] ?? "N/A"}</div>
-              <div class="metric">Avg Response Time (ms): ${web["Avg Response Time (ms)"] ?? "N/A"}</div>
-              <div class="metric">Status Code: ${web["Status Code"] ?? "N/A"}</div>
-              <div class="metric">Error: ${web["Error"] ?? "None"}</div>
-
-              <h3>▶ Server APM:</h3>
-              <div class="metric">CPU (%): ${server["CPU (%)"] ?? "N/A"}</div>
-              <div class="metric">Memory (MB): ${server["Memory (MB)"] ?? "N/A"}</div>
-              <div class="metric">Uptime Since: ${server["Uptime Since"] ?? "N/A"}</div>
-            `;
-            container.appendChild(card);
-          }
+    <script>
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                const data = await response.json();
+                document.getElementById("metrics-output").textContent =
+                    JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById("metrics-output").textContent =
+                    "❌ Failed to load APM metrics.";
+            }
         }
-      } catch (error) {
-        alert("Failed to load metrics.");
-      }
-    }
-  </script>
+
+        // Initial load and refresh every 10 seconds
+        loadMetrics();
+        setInterval(loadMetrics, 10000);
+    </script>
 </body>
 </html>
