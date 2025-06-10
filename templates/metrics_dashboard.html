@@ -9,11 +9,9 @@
             padding: 30px;
             background-color: #f9f9f9;
         }
-
         h1 {
             color: #333;
         }
-
         .metric-section {
             margin-top: 20px;
             padding: 20px;
@@ -22,28 +20,23 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-
         .metric-title {
             font-size: 18px;
             margin-bottom: 10px;
             color: #555;
         }
-
         .metric-table {
             width: 100%;
             border-collapse: collapse;
         }
-
         .metric-table th, .metric-table td {
             padding: 8px 12px;
             border-bottom: 1px solid #eee;
             text-align: left;
         }
-
         .metric-table th {
             background-color: #f0f0f0;
         }
-
         .no-data {
             color: #999;
             font-style: italic;
@@ -52,53 +45,58 @@
 </head>
 <body>
 
-    <h1>📊 Live APM Metrics</h1>
-    <p>(Auto-refreshes every 10 seconds)</p>
+<h1>📊 Live APM Metrics</h1>
+<p>(Auto-refreshes every 10 seconds)</p>
 
-    <div id="apm-metrics" class="metric-section">
-        <div class="metric-title">Latest Metrics:</div>
-        <div id="metrics-content" class="no-data">Waiting for data...</div>
-    </div>
+<div id="apm-metrics" class="metric-section">
+    <div class="metric-title">Latest Metrics:</div>
+    <div id="metrics-content" class="no-data">Waiting for data...</div>
+</div>
 
-    <script>
-        async function loadMetrics() {
-            try {
-                const res = await fetch('/metrics');
-                const data = await res.json();
-                const container = document.getElementById("metrics-content");
+<script>
+    function renderObjectTable(obj, parentKey = '') {
+        let html = '';
 
-                if (Object.keys(data).length === 0) {
-                    container.innerHTML = "<span class='no-data'>No metrics available yet...</span>";
-                    return;
-                }
+        for (const key in obj) {
+            const value = obj[key];
+            const displayKey = parentKey ? `${parentKey} → ${key}` : key;
 
-                let html = "";
-
-                for (const appKey in data) {
-                    html += `<h3>${appKey}</h3><table class="metric-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>`;
-                    const subMetrics = data[appKey];
-                    for (const key in subMetrics) {
-                        if (typeof subMetrics[key] === "object") {
-                            for (const nestedKey in subMetrics[key]) {
-                                html += `<tr><td>${key} → ${nestedKey}</td><td>${subMetrics[key][nestedKey]}</td></tr>`;
-                            }
-                        } else {
-                            html += `<tr><td>${key}</td><td>${subMetrics[key]}</td></tr>`;
-                        }
-                    }
-                    html += "</tbody></table><br/>";
-                }
-
-                container.innerHTML = html;
-
-            } catch (error) {
-                document.getElementById("metrics-content").innerHTML = "<span class='no-data'>Error fetching metrics.</span>";
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                html += renderObjectTable(value, displayKey);
+            } else {
+                html += `<tr><td>${displayKey}</td><td>${value}</td></tr>`;
             }
         }
 
-        loadMetrics();
-        setInterval(loadMetrics, 10000);
-    </script>
+        return html;
+    }
+
+    async function loadMetrics() {
+        try {
+            const res = await fetch('/metrics');
+            const data = await res.json();
+            const container = document.getElementById("metrics-content");
+
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = "<span class='no-data'>No metrics available yet...</span>";
+                return;
+            }
+
+            let html = `<table class="metric-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>`;
+            html += renderObjectTable(data);
+            html += "</tbody></table>";
+
+            container.innerHTML = html;
+
+        } catch (error) {
+            document.getElementById("metrics-content").innerHTML =
+                "<span class='no-data'>Error fetching metrics.</span>";
+        }
+    }
+
+    loadMetrics();
+    setInterval(loadMetrics, 10000);
+</script>
 
 </body>
 </html>
