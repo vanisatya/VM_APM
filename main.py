@@ -15,7 +15,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # GET endpoint for dashboard page
 @app.get("/", response_class=HTMLResponse)
 def get_dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("Dashboard.html", {"request": request})
 
 # POST endpoint to trigger install.sh
 @app.post("/install")
