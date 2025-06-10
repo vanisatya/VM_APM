@@ -13,7 +13,7 @@ latest_metrics = {}
 
 @app.get("/", response_class=HTMLResponse)
 def get_dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("Dashboard.html", {"request": request})
 
 @app.post("/install")
 def install_vm_apm():
