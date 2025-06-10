@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import subprocess
@@ -19,9 +19,13 @@ def get_dashboard(request: Request):
 def install_vm_apm():
     try:
         subprocess.Popen(["bash", "install.sh"])
-        return {"status": "VM APM installation started"}
+        return RedirectResponse(url="/metrics-dashboard", status_code=303)
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/metrics-dashboard", response_class=HTMLResponse)
+def metrics_dashboard(request: Request):
+    return templates.TemplateResponse("metrics_dashboard.html", {"request": request})
 
 @app.post("/metrics/upload")
 async def receive_metrics(request: Request):
