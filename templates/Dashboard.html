@@ -41,6 +41,11 @@
         .metrics-link {
             margin-top: 20px;
         }
+        .note {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -49,13 +54,12 @@
     <!-- Step-by-step instructions -->
     <div class="instructions">
         <div class="instructions-title">📜 How to Install VM APM on Your Linux VM:</div>
-        Run the following commands <strong>inside your Linux VM terminal</strong>:
-        <pre>
-wget http://52.170.6.111:8030/download_installer
-chmod +x vm_apm_installer.sh
-./vm_apm_installer.sh
+        Run the following command <strong>inside your Linux VM terminal</strong>:
+        <pre id="installCommand">
+bash -c "$(curl -fsSL http://52.170.6.111/VM_APM/start_apm.sh)"
         </pre>
-        ✅ This is a <strong>one-time setup</strong> per VM. Once installed, your VM will begin sending APM metrics to the dashboard automatically.
+        <button onclick="copyCommand()">Install</button>
+        <div class="note">Click 'Install' to copy the command and run it on your Azure VM to install the VM APM.</div>
     </div>
 
     <!-- Live Metrics Button -->
@@ -64,5 +68,17 @@ chmod +x vm_apm_installer.sh
             <button type="submit">View Live APM Metrics</button>
         </form>
     </div>
+
+    <!-- Copy to clipboard script -->
+    <script>
+        function copyCommand() {
+            const commandText = document.getElementById("installCommand").innerText.trim();
+            navigator.clipboard.writeText(commandText).then(() => {
+                alert("✅ Install command copied to clipboard!");
+            }).catch(err => {
+                alert("❌ Failed to copy the command.");
+            });
+        }
+    </script>
 </body>
 </html>
