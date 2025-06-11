@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import subprocess
@@ -36,7 +36,7 @@ async def receive_metrics(request: Request):
 def get_latest_metrics():
     return latest_metrics
 
-# ✅ New route: serve the vm_apm_installer.sh file for wget
+# ✅ Route to serve the old installer script via wget
 @app.get("/download_installer")
 def download_installer():
     return FileResponse(
@@ -44,3 +44,8 @@ def download_installer():
         media_type="application/x-sh",
         filename="vm_apm_installer.sh"
     )
+
+# ✅ New route to provide install command (used by dashboard install button)
+@app.get("/copy-install-command", response_class=PlainTextResponse)
+def get_install_command():
+    return 'bash -c "$(curl -fsSL http://52.170.6.111/VM_APM/start_apm.sh)"'
