@@ -28,6 +28,10 @@ def install_vm_apm():
 def metrics_dashboard(request: Request):
     return templates.TemplateResponse("metrics_dashboard.html", {"request": request})
 
+@app.get("/metrics-data", response_class=JSONResponse)
+def get_metrics_data():
+    return latest_metrics
+
 @app.post("/metrics/upload")
 async def receive_metrics(request: Request):
     data = await request.json()
@@ -40,7 +44,6 @@ async def receive_metrics(request: Request):
 def get_latest_metrics():
     return latest_metrics
 
-# ✅ NEW: Route for clients to download the APM installer zip
 @app.get("/download_apm")
 def download_apm():
     return FileResponse(
