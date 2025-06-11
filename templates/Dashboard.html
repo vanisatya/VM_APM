@@ -33,6 +33,9 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
+        .metrics-link {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -48,14 +51,20 @@
         <div class="instructions-title">📜 After Downloading:</div>
         Run the following commands <strong>one by one</strong> inside your Azure VM terminal:
         <pre>
-
 mkdir -p ~/apm && cd ~/apm
 unzip ~/Downloads/VM_APM_Install.zip
-cd VM_APM
+cd VM_APM - Copy
 chmod +x install.sh
 ./install.sh
         </pre>
         ✅ This is a one-time setup. Once installed, your VM will begin sending APM metrics to the dashboard.
+    </div>
+
+    <!-- Live Metrics Button -->
+    <div class="metrics-link">
+        <form action="/metrics-dashboard" method="get">
+            <button type="submit">View Live APM Metrics</button>
+        </form>
     </div>
 </body>
 </html>
