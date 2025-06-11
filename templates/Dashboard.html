@@ -10,6 +10,22 @@
         h1 {
             color: #333;
         }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        .instructions {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-left: 6px solid #4CAF50;
+        }
+        .instructions-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
         button {
             padding: 10px 20px;
             font-size: 16px;
@@ -22,17 +38,6 @@
         button:hover {
             background-color: #45a049;
         }
-        .instructions {
-            margin-top: 30px;
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-left: 6px solid #4CAF50;
-            font-family: monospace;
-        }
-        .instructions-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
         .metrics-link {
             margin-top: 20px;
         }
@@ -41,23 +46,16 @@
 <body>
     <h1>🚀 VM APM Setup</h1>
 
-    <!-- Download the ZIP installer -->
-    <form action="/download_apm" method="get">
-        <button type="submit">Install VM APM</button>
-    </form>
-
     <!-- Step-by-step instructions -->
     <div class="instructions">
-        <div class="instructions-title">📜 After Downloading:</div>
-        Run the following commands <strong>one by one</strong> inside your Azure VM terminal:
+        <div class="instructions-title">📜 How to Install VM APM on Your Linux VM:</div>
+        Run the following commands <strong>inside your Linux VM terminal</strong>:
         <pre>
-mkdir -p ~/apm && cd ~/apm
-unzip ~/Downloads/VM_APM_Install.zip
-cd VM_APM - Copy
-chmod +x install.sh
-./install.sh
+wget http://52.170.6.111:8030/download_installer
+chmod +x vm_apm_installer.sh
+./vm_apm_installer.sh
         </pre>
-        ✅ This is a one-time setup. Once installed, your VM will begin sending APM metrics to the dashboard.
+        ✅ This is a <strong>one-time setup</strong> per VM. Once installed, your VM will begin sending APM metrics to the dashboard automatically.
     </div>
 
     <!-- Live Metrics Button -->
