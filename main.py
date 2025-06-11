@@ -16,14 +16,6 @@ latest_metrics = {}
 def get_dashboard(request: Request):
     return templates.TemplateResponse("Dashboard.html", {"request": request})
 
-@app.post("/install")
-def install_vm_apm():
-    try:
-        subprocess.Popen(["bash", "install.sh"])
-        return RedirectResponse(url="/metrics-dashboard", status_code=303)
-    except Exception as e:
-        return {"error": str(e)}
-
 @app.get("/metrics-dashboard", response_class=HTMLResponse)
 def metrics_dashboard(request: Request):
     return templates.TemplateResponse("metrics_dashboard.html", {"request": request})
@@ -44,10 +36,11 @@ async def receive_metrics(request: Request):
 def get_latest_metrics():
     return latest_metrics
 
-@app.get("/download_apm")
-def download_apm():
+# ✅ New route: serve the vm_apm_installer.sh file for wget
+@app.get("/download_installer")
+def download_installer():
     return FileResponse(
-        path="downloads/VM_APM_Install.zip",
-        media_type="application/zip",
-        filename="VM_APM_Install.zip"
+        path="downloads/vm_apm_installer.sh",
+        media_type="application/x-sh",
+        filename="vm_apm_installer.sh"
     )
